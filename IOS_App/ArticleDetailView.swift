@@ -1,5 +1,6 @@
 import SwiftUI
 import WebKit
+import UIKit
 
 struct ArticleDetailView: View {
     let article: Article
@@ -261,7 +262,7 @@ struct WebViewContainer: UIViewRepresentable {
         let safeBodyHTML = sanitizeVisiblePercentSpaces(in: html)
         context.coordinator.lastLoadedBodyHTML = safeBodyHTML
         let htmlString = wrapHTMLDocument(bodyHTML: safeBodyHTML)
-        webView.loadHTMLString(htmlString, baseURL: nil)
+        webView.loadHTMLString(htmlString, baseURL: URL(string: "https://etherworld.co"))
         
         return webView
     }
@@ -273,7 +274,7 @@ struct WebViewContainer: UIViewRepresentable {
         guard safeBodyHTML != context.coordinator.lastLoadedBodyHTML else { return }
         context.coordinator.lastLoadedBodyHTML = safeBodyHTML
         let htmlString = wrapHTMLDocument(bodyHTML: safeBodyHTML)
-        uiView.loadHTMLString(htmlString, baseURL: nil)
+        uiView.loadHTMLString(htmlString, baseURL: URL(string: "https://etherworld.co"))
     }
 
     private func wrapHTMLDocument(bodyHTML: String) -> String {
@@ -342,6 +343,29 @@ struct WebViewContainer: UIViewRepresentable {
                     }
                 }
             }
+        }
+
+        func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+            guard navigationAction.navigationType == .linkActivated,
+                  let url = navigationAction.request.url else {
+                decisionHandler(.allow)
+                return
+            }
+
+            if isInternalURL(url) {
+                decisionHandler(.allow)
+                return
+            }
+
+            DispatchQueue.main.async {
+                UIApplication.shared.open(url)
+            }
+            decisionHandler(.cancel)
+        }
+
+        private func isInternalURL(_ url: URL) -> Bool {
+            guard let host = url.host?.lowercased() else { return false }
+            return host == "etherworld.co" || host.hasSuffix(".etherworld.co")
         }
         
         // Listen for height updates from ResizeObserver

@@ -304,9 +304,42 @@ struct HeroArticleCard: View {
     
     struct HomeFeedView: View {
         @EnvironmentObject var viewModel: ArticleViewModel
+        @EnvironmentObject var authManager: AuthenticationManager
         @StateObject private var notificationManager = NotificationManager.shared
         @State private var navigationPath = NavigationPath()
         @AppStorage("notificationsEnabled") private var notificationsEnabled = false
+        @AppStorage("preferredTopicsJSON") private var preferredTopicsJSON: String = "[]"
+        @AppStorage("feedMode") private var feedModeRaw: String = FeedMode.personalized.rawValue
+        @AppStorage("hasSeenPersonalizationOnboarding") private var hasSeenPersonalizationOnboarding = false
+        @State private var showingPersonalizationOnboarding = false
+        @State private var showingPersonalizationSettings = false
+
+        private var preferredTopics: [String] {
+            PersonalizationSettingsView.decodeTopics(from: preferredTopicsJSON)
+        }
+
+        private var feedArticles: [Article] {
+            if feedModeRaw == FeedMode.latest.rawValue || preferredTopics.isEmpty {
+                return viewModel.articles
+            }
+
+            let normalizedTopics = Set(preferredTopics.map { $0.lowercased() })
+            return viewModel.articles.sorted { lhs, rhs in
+                let lhsScore = personalizationScore(for: lhs, preferredTopics: normalizedTopics)
+                let rhsScore = personalizationScore(for: rhs, preferredTopics: normalizedTopics)
+                if lhsScore != rhsScore {
+                    return lhsScore > rhsScore
+                }
+                return lhs.publishedAt > rhs.publishedAt
+            }
+        }
+
+        private func personalizationScore(for article: Article, preferredTopics: Set<String>) -> Int {
+            let articleTags = Set(article.tags.map { $0.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) })
+            let overlap = articleTags.intersection(preferredTopics).count
+            let unreadBoost = article.isRead ? 0 : 1
+            return overlap * 10 + unreadBoost
+        }
         
         var body: some View {
             NavigationStack(path: $navigationPath) {
@@ -314,6 +347,9 @@ struct HeroArticleCard: View {
                     .navigationBarTitleDisplayMode(.inline)
                     .searchable(text: $viewModel.searchText, prompt: LocalizedStringKey("search.placeholder"))
                     .task {
+                        if !hasSeenPersonalizationOnboarding {
+                            showingPersonalizationOnboarding = true
+                        }
                         if notificationsEnabled {
                             NotificationManager.shared.checkForNewArticles(articles: viewModel.articles)
                         }
@@ -323,6 +359,28 @@ struct HeroArticleCard: View {
                     }
                     .navigationDestination(for: Article.self) { article in
                         ArticleDetailView(article: article)
+                    }
+                    .sheet(isPresented: $showingPersonalizationOnboarding) {
+                        PersonalizationOnboardingView(initialTopics: preferredTopics) { selectedTopics, mode in
+                            preferredTopicsJSON = PersonalizationSettingsView.encodeTopics(selectedTopics)
+                            feedModeRaw = mode.rawValue
+                            hasSeenPersonalizationOnboarding = true
+                            if let userId = authManager.currentUser?.id {
+                                Task {
+                                    await SupabaseService.shared.syncPersonalization(
+                                        userId: userId,
+                                        preferredTopics: selectedTopics,
+                                        feedMode: mode.rawValue
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    .sheet(isPresented: $showingPersonalizationSettings) {
+                        NavigationStack {
+                            PersonalizationSettingsView()
+                                .environmentObject(authManager)
+                        }
                     }
             }
         }
@@ -367,10 +425,29 @@ struct HeroArticleCard: View {
                         .environmentObject(viewModel)
                     
                     // Horizontal scrolling hero section
-                    if !viewModel.articles.isEmpty {
+                    if !feedArticles.isEmpty {
+                        HStack(spacing: 8) {
+                            Image(systemName: "sparkles")
+                                .foregroundStyle(.indigo)
+                            Text(feedModeRaw == FeedMode.personalized.rawValue ? "For You" : "Latest")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                            if feedModeRaw == FeedMode.personalized.rawValue && !preferredTopics.isEmpty {
+                                Text("\(preferredTopics.count) topics")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Button("Edit") {
+                                showingPersonalizationSettings = true
+                            }
+                            .font(.caption)
+                        }
+                        .padding(.horizontal)
+
                         ScrollView(.horizontal, showsIndicators: false) {
                             LazyHStack(spacing: 16) {
-                                ForEach(viewModel.articles.prefix(10)) { article in
+                                ForEach(feedArticles.prefix(10)) { article in
                                     NavigationLink(value: article) {
                                         HeroArticleCard(article: article)
                                     }
@@ -382,7 +459,7 @@ struct HeroArticleCard: View {
                     }
                     
                     // All articles in vertical list
-                    if viewModel.articles.count > 0 {
+                    if !feedArticles.isEmpty {
                         topStoriesSection
                     }
                 }
@@ -408,14 +485,14 @@ struct HeroArticleCard: View {
                 .padding(.horizontal)
                 .padding(.top, 24)
                 
-                ForEach(Array(viewModel.articles.enumerated()), id: \.element.id) { index, article in
+                ForEach(Array(feedArticles.enumerated()), id: \.element.id) { index, article in
                     NavigationLink(value: article) {
                         TopStoryRow(article: article)
                     }
                     .buttonStyle(.plain)
                     .onAppear {
                         // Load more when reaching near the end
-                        if index == viewModel.articles.count - 3 {
+                        if index == feedArticles.count - 3 {
                             Task {
                                 await viewModel.loadMore()
                             }
@@ -456,5 +533,7 @@ struct HeroArticleCard: View {
     
     #Preview {
         HomeFeedView()
+            .environmentObject(AuthenticationManager())
+            .environmentObject(ArticleViewModel())
     }
 

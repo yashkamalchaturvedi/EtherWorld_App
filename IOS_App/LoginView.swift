@@ -10,6 +10,7 @@ struct LoginView: View {
     @State private var showOTPField: Bool = false
     @State private var resendAvailableAt: Date = .distantPast
     @State private var now: Date = Date()
+    @State private var showingPrivacyPolicy: Bool = false
     @FocusState private var isEmailFocused: Bool
     @FocusState private var isOTPFocused: Bool
     @AppStorage("newsletterOptIn") private var newsletterOptIn: Bool = false
@@ -311,9 +312,13 @@ struct LoginView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                 
-                Link(LocalizedStringKey("login.footer.link"), destination: URL(string: "https://etherworld.co/privacy")!)
-                    .font(.caption)
-                    .foregroundColor(.blue)
+                Button {
+                    showingPrivacyPolicy = true
+                } label: {
+                    Text(LocalizedStringKey("login.footer.link"))
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                }
             }
             .padding(.bottom, 32)
         }
@@ -346,6 +351,9 @@ struct LoginView: View {
         }
         .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { value in
             now = value
+        }
+        .sheet(isPresented: $showingPrivacyPolicy) {
+            PrivacyPolicyView()
         }
         .animation(.easeInOut, value: showingSuccess)
     }

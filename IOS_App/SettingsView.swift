@@ -10,8 +10,11 @@ struct SettingsView: View {
     @AppStorage("appTheme") private var appThemeRaw: String = AppTheme.system.rawValue
     @AppStorage("analyticsEnabled") private var analyticsEnabled = false
     @AppStorage("newsletterOptIn") private var newsletterOptIn = false
+    @AppStorage("preferredTopicsJSON") private var preferredTopicsJSON: String = "[]"
+    @AppStorage("feedMode") private var feedModeRaw: String = FeedMode.personalized.rawValue
     @State private var showingPrivacyPolicy = false
     @State private var showingLogoutConfirmation = false
+    @Environment(\.openURL) private var openURL
     @Environment(\.dismiss) private var dismiss
 
     private var themeBinding: Binding<AppTheme> {
@@ -26,6 +29,7 @@ struct SettingsView: View {
 
     private func syncPreferences() {
         guard let userId = authManager.currentUser?.id else { return }
+        let preferredTopics = PersonalizationSettingsView.decodeTopics(from: preferredTopicsJSON)
         let prefs = SupabaseService.UserPreferences(
             userId: userId,
             notificationsEnabled: notificationsEnabled,
@@ -33,6 +37,8 @@ struct SettingsView: View {
             analyticsEnabled: analyticsEnabled,
             newsletterOptIn: newsletterOptIn,
             appLanguage: "en",
+            preferredTopics: preferredTopics,
+            feedMode: feedModeRaw,
             lastUpdated: Date()
         )
         Task {
@@ -104,6 +110,30 @@ struct SettingsView: View {
                 
                 // Appearance Section
                 Section {
+                    NavigationLink {
+                        PersonalizationSettingsView()
+                            .environmentObject(authManager)
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "sparkles")
+                                .foregroundStyle(.indigo)
+                                .frame(width: 28)
+                                .font(.system(size: 16))
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Personalization")
+                                    .fontWeight(.medium)
+                                Text("Configure your For You feed")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .foregroundStyle(.primary)
+
                     VStack(alignment: .leading, spacing: 12) {
                         Label {
                             Text(LocalizedStringKey("settings.appearance.theme"))
@@ -207,7 +237,11 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                     
-                    Link(destination: URL(string: "https://etherworld.co")!) {
+                    Button {
+                        if let url = URL(string: "https://etherworld.co") {
+                            openURL(url)
+                        }
+                    } label: {
                         HStack(spacing: 12) {
                             Image(systemName: "globe")
                                 .foregroundStyle(.blue)
@@ -215,6 +249,9 @@ struct SettingsView: View {
                                 .font(.system(size: 16))
                             Text(LocalizedStringKey("settings.about.visit"))
                                 .fontWeight(.medium)
+                            Text("(Opens in Safari)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                             Spacer()
                             Image(systemName: "arrow.up.right")
                                 .font(.caption)
@@ -223,7 +260,11 @@ struct SettingsView: View {
                     }
                     .foregroundStyle(.primary)
                     
-                    Link(destination: URL(string: "https://twitter.com/AayushS20298601")!) {
+                    Button {
+                        if let url = URL(string: "https://twitter.com/AayushS20298601") {
+                            openURL(url)
+                        }
+                    } label: {
                         HStack(spacing: 12) {
                             Image(systemName: "at")
                                 .foregroundStyle(.blue)
@@ -231,6 +272,9 @@ struct SettingsView: View {
                                 .font(.system(size: 16))
                             Text(LocalizedStringKey("settings.about.twitter"))
                                 .fontWeight(.medium)
+                            Text("(Opens in Safari)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                             Spacer()
                             Image(systemName: "arrow.up.right")
                                 .font(.caption)

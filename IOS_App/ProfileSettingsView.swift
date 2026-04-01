@@ -164,6 +164,8 @@ struct SettingsSectionsView: View {
     @AppStorage("appTheme") private var appThemeRaw: String = AppTheme.system.rawValue
     @AppStorage("analyticsEnabled") private var analyticsEnabled = false
     @AppStorage("newsletterOptIn") private var newsletterOptIn = false
+    @Environment(\.openURL) private var openURL
+    @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var viewModel: ArticleViewModel
     @State private var showingPrivacyPolicy = false
 
@@ -224,6 +226,24 @@ struct SettingsSectionsView: View {
         
         // Appearance
         Section {
+            NavigationLink {
+                PersonalizationSettingsView()
+                    .environmentObject(authManager)
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "sparkles")
+                        .foregroundStyle(.indigo)
+                        .frame(width: 28)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Personalization")
+                            .fontWeight(.medium)
+                        Text("Configure your For You feed")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
             VStack(alignment: .leading, spacing: 12) {
                     Label {
                     Text(LocalizedStringKey("settings.appearance.theme"))
@@ -309,9 +329,20 @@ struct SettingsSectionsView: View {
                     .foregroundStyle(.secondary)
             }
             
-            Link(destination: URL(string: "https://etherworld.co")!) {
-                Label(LocalizedStringKey("settings.about.visit"), systemImage: "globe")
+            Button {
+                if let url = URL(string: "https://etherworld.co") {
+                    openURL(url)
+                }
+            } label: {
+                HStack {
+                    Label(LocalizedStringKey("settings.about.visit"), systemImage: "globe")
+                    Spacer()
+                    Text("(Opens in Safari)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
+            .foregroundStyle(.primary)
         } header: {
             Text(LocalizedStringKey("settings.about.section"))
         }

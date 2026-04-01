@@ -54,7 +54,38 @@ final class SupabaseService {
         let analyticsEnabled: Bool
         let newsletterOptIn: Bool
         let appLanguage: String
+        let preferredTopics: [String]?
+        let feedMode: String?
         let lastUpdated: Date
+
+        init(
+            userId: String,
+            notificationsEnabled: Bool,
+            appTheme: String,
+            analyticsEnabled: Bool,
+            newsletterOptIn: Bool,
+            appLanguage: String,
+            preferredTopics: [String]? = nil,
+            feedMode: String? = nil,
+            lastUpdated: Date
+        ) {
+            self.userId = userId
+            self.notificationsEnabled = notificationsEnabled
+            self.appTheme = appTheme
+            self.analyticsEnabled = analyticsEnabled
+            self.newsletterOptIn = newsletterOptIn
+            self.appLanguage = appLanguage
+            self.preferredTopics = preferredTopics
+            self.feedMode = feedMode
+            self.lastUpdated = lastUpdated
+        }
+    }
+
+    private struct PersonalizationPayload: Encodable {
+        let user_id: String
+        let preferred_topics: [String]
+        let feed_mode: String
+        let last_updated: Date
     }
 
     struct NewsletterSubscriber: Encodable {
@@ -135,5 +166,31 @@ final class SupabaseService {
         } catch {
             print("⚠️ Failed to log newsletter preference: \(error.localizedDescription)")
         }
+    }
+
+    func syncPersonalization(userId: String, preferredTopics: [String], feedMode: String) async {
+        guard let baseURL = seededSupabaseURL(), let anonKey = seededSupabaseAnonKey() else { return }
+        let endpoint = baseURL.appendingPathComponent("rest/v1/user_preferences")
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(anonKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("upsert", forHTTPHeaderField: "Prefer")
+        request.setValue("resolution=merge-duplicates", forHTTPHeaderField: "Prefer")
+
+        let payload = [
+            PersonalizationPayload(
+                user_id: userId,
+                preferred_topics: preferredTopics,
+                feed_mode: feedMode,
+                last_updated: Date()
+            )
+        ]
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        request.httpBody = try? encoder.encode(payload)
+
+        _ = try? await URLSession.shared.data(for: request)
     }
 }

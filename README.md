@@ -98,6 +98,11 @@ The app requests the following permissions:
 - [ ] Configure in-app purchases (if any)
 - [ ] Submit for review
 
+### 4.2.2 Re-Submission Assets
+- [x] Native functionality remediation implemented (in-app navigation policy, in-app privacy access, personalization onboarding)
+- [x] Reviewer notes prepared: see `APP_REVIEW_NOTES.md`
+- [ ] Validate reviewer test path on physical device before submission
+
 ### Screenshots Needed
 1. Login screen with logo
 2. Home feed with articles
