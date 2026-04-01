@@ -60,11 +60,15 @@ struct ProfileSettingsView: View {
                 
                 // Account Management
                 Section {
-                    NavigationLink {
-                        SessionManagementView()
-                    } label: {
+                    HStack {
                         Label(LocalizedStringKey("profile.activeSessions"), systemImage: "laptopcomputer.and.iphone")
+                        Spacer()
+                        Text("Coming soon")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
+                    .accessibilityLabel(LocalizedStringKey("profile.activeSessions"))
+                    .accessibilityHint("Feature coming soon")
                     
                     Button {
                         showingExportSheet = true

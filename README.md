@@ -16,7 +16,6 @@ A native iOS app for reading crypto and blockchain content from EtherWorld.
 - ✅ Google Sign In  
 - ✅ OTP via Email (6-digit verification code)
 - ✅ Firebase Authentication
-- ✅ Skip Login (Dev Mode - Remove before production)
 
 ### Core Features
 - ✅ Browse articles from Ghost CMS
@@ -35,7 +34,7 @@ A native iOS app for reading crypto and blockchain content from EtherWorld.
 ### Privacy & Data
 - ✅ Privacy Policy view
 - ✅ Data export capability
-- ✅ Session management
+- ✅ Session details (active session UI)
 - ✅ Analytics (opt-in)
 - ✅ Account deletion
 - ✅ Supabase integration for preferences sync
@@ -57,10 +56,6 @@ A native iOS app for reading crypto and blockchain content from EtherWorld.
 ## Privacy Permissions
 
 The app requests the following permissions:
-- **NSUserTrackingUsageDescription**: Anonymous analytics (opt-in)
-- **NSCameraUsageDescription**: Photo upload capability
-- **NSPhotoLibraryUsageDescription**: Image sharing
-- **NSFaceIDUsageDescription**: Biometric authentication
 - **Background fetch**: Article updates
 
 ## App Store Submission Checklist
@@ -73,7 +68,7 @@ The app requests the following permissions:
 - [x] Privacy descriptions added
 - [x] App Transport Security configured
 - [x] Firebase Bundle ID updated
-- [x] Remove dev skip login button before production
+- [x] Remove dev/demo login path before production
 - [ ] Test on physical device
 
 ### Testing Requirements
@@ -97,6 +92,7 @@ The app requests the following permissions:
 - [ ] Set privacy policy URL: https://etherworld.co/privacy
 - [ ] Configure in-app purchases (if any)
 - [ ] Submit for review
+- [x] Finalized listing copy: see `APP_STORE_METADATA.md`
 
 ### 4.2.2 Re-Submission Assets
 - [x] Native functionality remediation implemented (in-app navigation policy, in-app privacy access, personalization onboarding)
@@ -175,7 +171,6 @@ The app requests the following permissions:
 
 ## Development Notes
 
-- Keep the dev skip login button until ready for production
 - Test all auth flows on physical device before submission
 - Verify Firebase and Supabase are properly configured
 - Check that all API keys are valid and not expired

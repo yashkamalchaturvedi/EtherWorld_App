@@ -119,13 +119,6 @@ final class AuthenticationManager: ObservableObject {
         otpSent = false
         defer { isLoading = false }
 
-        // Demo login: instantly "send" OTP for demo@etherworld.co
-        if normalizedEmail == "demo@etherworld.co" {
-            print("✅ Demo OTP sent for demo@etherworld.co")
-            otpSent = true
-            return
-        }
-
         // Log the request to Supabase for analytics/throttling (non-blocking)
         let extractedName = extractName(from: normalizedEmail)
         Task { await SupabaseService.shared.logEmail(email: normalizedEmail, name: extractedName) }
@@ -139,7 +132,7 @@ final class AuthenticationManager: ObservableObject {
             if let networkError = error as? NetworkManager.NetworkError {
                 switch networkError {
                 case .notConfigured:
-                    errorMessage = "Email login is temporarily unavailable. Please try Apple/Google sign-in, or use demo@etherworld.co + 000000."
+                    errorMessage = "Email login is temporarily unavailable. Please try Apple or Google sign-in."
                 case .serverError(let message):
                     errorMessage = message
                 default:
@@ -175,22 +168,6 @@ final class AuthenticationManager: ObservableObject {
         errorMessage = nil
         defer { isLoading = false }
 
-        // Demo login: bypass backend for demo@etherworld.co and code 000000
-        if normalizedEmail == "demo@etherworld.co" && code == "000000" {
-            let user = User(
-                id: "demo-user-id",
-                email: normalizedEmail,
-                name: "Demo User",
-                authProvider: .email
-            )
-            saveUserData(user)
-            isAuthenticated = true
-            currentUser = user
-            UserDefaults.standard.removeObject(forKey: "emailForOTP")
-            print("✅ Demo login successful for demo@etherworld.co")
-            return
-        }
-
         do {
             let authResponse = try await NetworkManager.shared.verifyOTP(email: normalizedEmail, code: code)
 
@@ -224,7 +201,7 @@ final class AuthenticationManager: ObservableObject {
             if let networkError = error as? NetworkManager.NetworkError {
                 switch networkError {
                 case .notConfigured:
-                    errorMessage = "Email login is temporarily unavailable. Please try Apple/Google sign-in, or use demo@etherworld.co + 000000."
+                    errorMessage = "Email login is temporarily unavailable. Please try Apple or Google sign-in."
                 case .serverError(let message):
                     errorMessage = message
                 case .unauthorized:
